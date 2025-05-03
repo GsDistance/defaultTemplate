@@ -1,5 +1,5 @@
 name: Backup Last Version
-description: Creates a folder named with the last versions number inside the versions folder that is on the versioning branch. Then copies the main branch files into that folder.
+
 
 on:
     workflow_run: 
