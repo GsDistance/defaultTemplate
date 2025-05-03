@@ -15,6 +15,11 @@ jobs:
         with:
           fetch-depth: 0  # Fetch all history for all branches and tags
 
+      - name: Set Git configuration for commit
+        run: |
+            git config --global user.name "github-actions[bot]"
+            git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
       - name: Set up Git and create Versioning branch
         run: |
 
@@ -28,14 +33,12 @@ jobs:
             echo "Versioning branch does not exist. Creating it..."
             # Create and checkout local versioning branch
             git checkout -b versioning
+            # Make an empty commit to clear the branch history
+            git reset --hard HEAD
+            git commit --allow-empty -m "Initial commit for versioning branch"
             # Push the new branch to the remote repository
             git push -u origin versioning
           fi
-
-      - name: Set Git configuration for commit
-        run: |
-            git config --global user.name "github-actions[bot]"
-            git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Checkout versioning branch
         uses: actions/checkout@v3
