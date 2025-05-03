@@ -10,14 +10,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Set Git configuration for commit
-        run: |
-            git config --global user.name "github-actions[bot]"
-            git config --global user.email "github-actions[bot]@users.noreply.github.com"
+      - name: Checkout existing repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Fetch all history for all branches and tags
 
-      - name: Create Versioning branch if it doesn't exist
-        id: check_branch
+      - name: Set up Git and create Versioning branch
         run: |
+
+          # Ensure the remote is set to the repository's origin
+          git remote add origin $GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git || true
+
           # Check if the versioning branch exists remotely
           if git ls-remote --exit-code --heads origin versioning; then
             echo "Versioning branch exists."
@@ -28,6 +31,11 @@ jobs:
             # Push the new branch to the remote repository
             git push -u origin versioning
           fi
+
+      - name: Set Git configuration for commit
+        run: |
+            git config --global user.name "github-actions[bot]"
+            git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Checkout versioning branch
         uses: actions/checkout@v3
