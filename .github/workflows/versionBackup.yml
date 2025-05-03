@@ -50,12 +50,23 @@ jobs:
                 mkdir versions
             fi
 
+            # Check if the latest version directory exists, if not create it.
+            if [ ! -d "versions/latest" ]; then
+                mkdir versions/latest
+            fi
+
             # Create a new directory with the version number in the versioning branch.
             mkdir -p versions/${{ env.version }}
 
             # Copy files from the checked-out main branch (in the "main" folder) into the backup directory.
             cp -R main/* versions/${{ env.version }}/
             cp -R main/* versions/lastest/
+            
+            # Copy the version file to the backup directory.
+            cp version.v versions/${{ env.version }}/
+            cp version.json versions/${{ env.version }}/
+            cp version.v versions/lastest/
+            cp version.json versions/lastest/
 
             # Commit the backup folder.
             git add versions/${{ env.version }}
