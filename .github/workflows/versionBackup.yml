@@ -3,7 +3,7 @@ name: Backup Last Version
 
 on:
     workflow_run: 
-      workflows: ["versioner"]
+      workflows: ["Update Version Info"]
       types:
         - completed
 
@@ -43,6 +43,11 @@ jobs:
             if [ -z "${{ env.version }}" ]; then
                 echo "No version found. Exiting."
                 exit 1
+            fi
+
+            # Check if versions directory exists, if not create it.
+            if [ ! -d "versions" ]; then
+                mkdir versions
             fi
 
             # Create a new directory with the version number in the versioning branch.
