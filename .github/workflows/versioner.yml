@@ -23,7 +23,7 @@ jobs:
 
       - name: Set up Git and create Versioning branch
         run: |
-          versioning_branch="versioning/${{ github.ref_name }}"
+          versioning_branch="versioning-${{ github.ref_name }}"
           git remote add origin $GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git || true
           if git ls-remote --exit-code --heads origin "$versioning_branch"; then
             echo "Versioning branch exists."
@@ -38,7 +38,7 @@ jobs:
       - name: Checkout versioning branch
         uses: actions/checkout@v3
         with:
-          ref: versioning/${{ github.ref_name }}   # use the dynamic versioning branch
+          ref: versioning-${{ github.ref_name }}   # use the dynamic versioning branch
 
       - name: Get the latest commit hash
         id: get_commit
