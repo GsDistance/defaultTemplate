@@ -2,8 +2,6 @@ name: Update Version Info
 
 on:
   push:
-    branches:
-      - main
 
 jobs:
   update-version:
@@ -13,7 +11,7 @@ jobs:
       - name: Checkout existing repository
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # Fetch all history for all branches and tags
+          ref: ${{ github.ref }}
 
       - name: Set Git configuration for commit
         run: |
@@ -22,28 +20,29 @@ jobs:
 
       - name: Set up Git and create Versioning branch
         run: |
+          branch_name="versioning/${{ github.ref_name }}"
           # Ensure the remote is set to the repository's origin
           git remote add origin $GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git || true
 
           # Check if the versioning branch exists remotely
-          if git ls-remote --exit-code --heads origin versioning; then
+          if git ls-remote --exit-code --heads origin "$branch_name"; then
             echo "Versioning branch exists."
           else
             echo "Versioning branch does not exist. Creating it..."
             # Create an orphan branch which does not inherit the history
-            git checkout --orphan versioning
+            git checkout --orphan "$branch_name"
             # Remove all files from the index
             git rm -rf .
             # Make an empty commit to initiate the new branch
             git commit --allow-empty -m "Initial commit for versioning branch"
             # Push the new branch to the remote repository
-            git push -u origin versioning
+            git push -u origin "$branch_name"
           fi
 
       - name: Checkout versioning branch
         uses: actions/checkout@v3
         with:
-          ref: versioning
+          ref: "versioning/${{ github.ref_name }}"
 
       - name: Get the latest commit hash
         id: get_commit
@@ -72,6 +71,6 @@ jobs:
         run: |
           git add version.json version.v
           git commit -m "Update version files with the latest version and commit hash"
-          git push origin versioning
+          git push origin "versioning/${{ github.ref_name }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
