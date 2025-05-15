@@ -51,9 +51,9 @@ jobs:
                 mkdir versions
             fi
 
-            # Check if the latest version directory exists, if not create it.
-            if [ ! -d "versions/latest" ]; then
-                mkdir versions/latest
+            # Check if the lastest version directory exists, if not create it.
+            if [ ! -d "versions/lastest" ]; then
+                mkdir versions/lastest
             fi
 
             # Create a new directory with the version number in the versioning branch.
