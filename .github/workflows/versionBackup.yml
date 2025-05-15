@@ -13,9 +13,9 @@ jobs:
     steps:
       - name: Checkout versioning branch
         id: check_branch
-        uses: actions/checkout@v3
+        uses: actions/checkout@main
         with:
-          ref: "versioning/${{ github.event.workflow_run.head_branch }}"
+          ref: versioning
 
       - name: Set Git configuration for commit
         run: |
@@ -25,16 +25,16 @@ jobs:
       - name: Get the latest version
         id: get_version
         run: |
-          git checkout "versioning/${{ github.event.workflow_run.head_branch }}"
+          git checkout versioning
           if [ -f version.v ]; then
               echo "version=$(cat version.v)" >> $GITHUB_ENV
           fi
 
       - name: Checkout main branch files
         id: checkout_main
-        uses: actions/checkout@v3
+        uses: actions/checkout@main
         with:
-          ref: ${{ github.event.workflow_run.head_branch }}
+          ref: main
           path: main
 
       - name: Backup version
@@ -83,6 +83,6 @@ jobs:
           git add versions/${{ env.version }}
           git add versions/lastest
           git commit -m "Backup of version ${{ env.version }} from main branch" || echo "Nothing to commit"
-          git push origin "versioning/${{ github.event.workflow_run.head_branch }}"
+          git push origin versioning
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
