@@ -28,6 +28,8 @@ jobs:
           git checkout versioning-${{ github.event.workflow_run.head_branch }}
           if [ -f version.v ]; then
               echo "version=$(cat version.v)" >> $GITHUB_ENV
+          else
+              echo "version=1" >> $GITHUB_ENV
           fi
 
       - name: Checkout main branch files
@@ -82,7 +84,7 @@ jobs:
           # Commit the backup folder.
           git add versions/${{ env.version }}
           git add versions/lastest
-          git commit -m "Backup of version ${{ env.version }} from main branch" || echo "Nothing to commit"
+          git commit -m "Backup of version ${{ env.version }} from branch ${{ github.event.workflow_run.head_branch }}" || echo "Nothing to commit"
           git push origin versioning-${{ github.event.workflow_run.head_branch }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
