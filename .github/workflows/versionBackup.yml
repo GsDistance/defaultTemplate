@@ -34,7 +34,6 @@ jobs:
       - name: Cleanup versioning branch except version files
         id: cleanup_versioning
         run: |
-            git checkout versioning-${{ github.event.workflow_run.head_branch }}
             # Remove all files except version.v, version.json, and the versions directory.
             find . -mindepth 1 -maxdepth 1 \
               ! -name '.git' \
@@ -42,7 +41,7 @@ jobs:
               ! -name 'version.json' \
               ! -name 'versions' \
               -exec rm -rf {} \;
-            git add . && git commit -m "Cleanup versioning branch"
+            git add . && git commit -m "Cleanup versioning branch" || echo "Nothing to commit"
 
       - name: Checkout main branch files
         id: checkout_main
