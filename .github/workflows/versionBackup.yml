@@ -73,7 +73,11 @@ jobs:
 
           # Copy files from the checked-out main branch (in the "main" folder) into the backup directory.
           cp -R main/* versions/${{ env.version }}/
+<<<<<<< HEAD
           rsync -av --exclude='.git' main/ .
+=======
+          sudo cp -R main/* /
+>>>>>>> ac9d0455b81752b395174886cf524669117dd48e
 
           # Zip the main branch files and copy them to the backup directory.
           zip -r versions/${{ env.version }}.zip main
