@@ -1,7 +1,6 @@
 name: Backup Last Version
 
 on:
-  workflow_dispatch:
   workflow_run:
     workflows: ["Update Version Info"]
     types:
@@ -37,7 +36,12 @@ jobs:
         run: |
             git checkout versioning-${{ github.event.workflow_run.head_branch }}
             # Remove all files except version.v, version.json, and the versions directory.
-            find . -maxdepth 1 ! -name 'version.v' ! -name 'version.json' ! -name 'versions' -exec rm -rf {} \;
+            find . -mindepth 1 -maxdepth 1 \
+              ! -name '.git' \
+              ! -name 'version.v' \
+              ! -name 'version.json' \
+              ! -name 'versions' \
+              -exec rm -rf {} \;
             git add . && git commit -m "Cleanup versioning branch"
 
       - name: Checkout main branch files
@@ -94,7 +98,7 @@ jobs:
           echo "Version: ${{ env.version }}" >> versions/ext/change_log.txt
 
           # Commit the versioning branch.
-          git add *
+          git add .
           git commit -m "Backup of version ${{ env.version }} from branch ${{ github.event.workflow_run.head_branch }}" || echo "Nothing to commit"
           git push origin versioning-${{ github.event.workflow_run.head_branch }}
         env:
