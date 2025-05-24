@@ -15,6 +15,26 @@
         </style>
     </head>
     <body>
-        <h1>Template repository</h1>
+        <h1 id="header">Template repository v</h1>
+        <script>
+            // Check version.v file exists
+            const versionFile = fetch('version.v').then((response) => {
+                if (response.ok) {
+                    return response.text();
+                } else {
+                    return '';
+                }
+            });
+
+            // Fetch the version number from the version.v file
+            const version = versionFile.then((text) => {
+                return text.trim();
+            });
+
+            // Update the header with the version number
+            version.then((version) => {
+                document.getElementById('header').textContent = `Template repository v${version}`;
+            });
+        </script>
     </body>
 </html>
