@@ -71,13 +71,16 @@ jobs:
           # Create a new directory with the version number in the versioning branch.
           mkdir -p versions/${{ env.version }}
 
-          # Copy files from the checked-out main branch (in the "main" folder) into the backup directory.
+                    # Copy files from the checked-out main branch (in the "main" folder) into the backup directory.
           cp -R main/* versions/${{ env.version }}/
           sudo find main/ -mindepth 1 -maxdepth 1 \( -name ".git" -o -name ".github" \) -prune -o -exec cp -R {} . \;
 
+          # Remove the "main" checkout directory to avoid including its Git metadata.
+          rm -rf main
+
           # Zip the main branch files and copy them to the backup directory.
-          zip -r versions/${{ env.version }}.zip main
-          zip -r versions/ext/latest.zip main
+          zip -r versions/${{ env.version }}.zip .
+          zip -r versions/ext/latest.zip .
 
           # Copy the version file to the backup directory.
           cp version.v versions/${{ env.version }}/
