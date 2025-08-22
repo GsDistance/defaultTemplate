@@ -107,8 +107,20 @@ async function handleVersionBackup(octokit, context, versioningBranch) {
       }
     });
 
-    // Copy files to version directory
-    execSync(`cp -r * ${versionDir}/`);
+    // Copy files to version directory, excluding the versions directory
+    const files = fs.readdirSync('.').filter(file => file !== 'versions' && file !== '.git');
+    files.forEach(file => {
+      const source = `./${file}`;
+      const dest = `${versionDir}/${file}`;
+      
+      if (fs.lstatSync(source).isDirectory()) {
+        // For directories, use cp -r
+        execSync(`cp -r ${source} ${dest}`);
+      } else {
+        // For files, use copyFileSync
+        fs.copyFileSync(source, dest);
+      }
+    });
     
     // Create zip archives
     execSync(`zip -r ${versionDir}.zip .`);
