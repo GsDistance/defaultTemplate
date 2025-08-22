@@ -14,3 +14,7 @@ File format:
     "builtPackagePath": "<path to built package inside the repository root>",
 }
 ```
+
+builtPackagePath is optional.
+
+versioningBranch and githubRepo are required.

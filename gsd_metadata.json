@@ -1,0 +1,10 @@
+{
+    "name": "defaultTemplate",
+    "description": "Default template for quick setup.",
+    "readmeURL": "https://gsdistance.github.io/defaultTemplate/README.md",
+    "author": "GsDistance",
+    "license": "MIT",
+    "versioningBranch": "versioning",
+    "githubRepo": "GsDistance/defaultTemplate",
+    "builtPackagePath": ""
+}
