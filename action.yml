@@ -1,0 +1,17 @@
+name: 'GsD Versioner'
+description: 'Automated versioning and backup for GsD projects'
+author: 'GsDistance'
+branding:
+  icon: 'git-commit'
+  color: 'blue'
+inputs:
+  github-token:
+    description: 'GitHub token for authentication'
+    required: true
+  versioning-branch:
+    description: 'Base name for the versioning branch'
+    required: false
+    default: 'versioning'
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
