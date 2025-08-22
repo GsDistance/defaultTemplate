@@ -41,7 +41,13 @@ jobs:
               ! -name 'version.json' \
               ! -name 'versions' \
               -exec rm -rf {} \;
+            # Make sure to keep versionlist.json during cleanup
             git add . && git commit -m "Cleanup versioning branch" || echo "Nothing to commit"
+            
+            # Keep versionlist.json when cleaning up
+            if [ -f versionlist.json ]; then
+                git checkout -- versionlist.json
+            fi
 
       - name: Checkout main branch files
         id: checkout_main
@@ -50,6 +56,11 @@ jobs:
           ref: ${{ github.event.workflow_run.head_branch }}
           path: main
       
+      - name: Install jq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
       - name: Backup version
         id: backup_version
         run: |
@@ -88,6 +99,24 @@ jobs:
           cp version.v versions/ext/
           cp version.json versions/ext/
 
+          # Create or update versionlist.json
+          if [ -f versionlist.json ]; then
+            # Read existing versionlist.json and update it
+            jq --arg version "${{ env.version }}" \
+               --arg commitHash "${{ github.event.workflow_run.head_commit.id }}" \
+               --arg commitDate "${{ github.event.workflow_run.head_commit.timestamp }}" \
+               --arg commitMessage "${{ github.event.workflow_run.head_commit.message }}" \
+               '.versions += [{"version": $version, "commitHash": $commitHash, "commitDate": $commitDate, "commitMessage": $commitMessage}]' \
+               versionlist.json > versionlist.tmp && mv versionlist.tmp versionlist.json
+          else
+            # Create new versionlist.json with the current version
+            echo '{"versions": [{"version": "'${{ env.version }}'", "commitHash": "'${{ github.event.workflow_run.head_commit.id }}'", "commitDate": "'${{ github.event.workflow_run.head_commit.timestamp }}'", "commitMessage": "'${{ github.event.workflow_run.head_commit.message }}"}]}' > versionlist.json
+          fi
+          
+          # Copy versionlist.json to the backup directory
+          cp versionlist.json versions/${{ env.version }}/
+          cp versionlist.json versions/ext/
+
           # Create a change log file with the commit hash, commit message, and date.
           echo "Commit Hash: ${{ github.event.workflow_run.head_commit.id }}" > versions/${{ env.version }}/change_log.txt
           echo "Commit Date: ${{ github.event.workflow_run.head_commit.timestamp }}" >> versions/${{ env.version }}/change_log.txt
@@ -99,9 +128,10 @@ jobs:
           echo "Commit Message: ${{ github.event.workflow_run.head_commit.message }}" >> versions/ext/change_log.txt
           echo "Version: ${{ env.version }}" >> versions/ext/change_log.txt
 
-          # Commit the versioning branch.
+      - name: Commit and push changes
+        run: |
           git add .
-          git commit -m "Backup of version ${{ env.version }} from branch ${{ github.event.workflow_run.head_branch }}" || echo "Nothing to commit"
+          git commit -m "Backup version ${{ env.version }}"
           git push origin versioning-${{ github.event.workflow_run.head_branch }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
