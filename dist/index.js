@@ -34599,12 +34599,89 @@ async function handleVersionBackup(octokit, context, versioningBranch) {
       }
     });
 
-    // Copy files to version directory
-    execSync(`cp -r * ${versionDir}/`);
+    // Function to copy files recursively, excluding the versions directory
+    const copyRecursiveSync = (src, dest, baseDir = '') => {
+      const exists = fs.existsSync(src);
+      if (!exists) return;
+      
+      const stats = fs.statSync(src);
+      const relativePath = path.relative(baseDir || process.cwd(), src);
+      
+      // Skip the versions directory entirely
+      if (relativePath === 'versions' || relativePath.startsWith('versions/') || relativePath.startsWith('versions\\')) {
+        return;
+      }
+      
+      if (stats.isDirectory()) {
+        if (!fs.existsSync(dest)) {
+          fs.mkdirSync(dest, { recursive: true });
+        }
+        // Skip copying the versions directory
+        if (path.basename(src) === 'versions') {
+          return;
+        }
+        fs.readdirSync(src).forEach(childItem => {
+          copyRecursiveSync(
+            path.join(src, childItem),
+            path.join(dest, childItem),
+            baseDir || src
+          );
+        });
+      } else {
+        fs.copyFileSync(src, dest);
+      }
+    };
+
+    // Get list of files to copy (excluding versions and git directory)
+    const files = fs.readdirSync('.').filter(file => 
+      !['versions', '.git', `${versionDir}.zip`].includes(file)
+    );
     
-    // Create zip archives
-    execSync(`zip -r ${versionDir}.zip .`);
-    execSync(`zip -r ${extDir}/latest.zip .`);
+    // Create version directory if it doesn't exist
+    if (!fs.existsSync(versionDir)) {
+      fs.mkdirSync(versionDir, { recursive: true });
+    }
+    
+    // Copy each file/directory
+    files.forEach(file => {
+      const source = path.resolve(file);
+      const dest = path.join(versionDir, file);
+      copyRecursiveSync(source, dest, process.cwd());
+    });
+    
+    // Create zip archives, excluding the versions directory
+    const createZip = (sourceDir, zipFile) => {
+      const files = fs.readdirSync(sourceDir)
+        .filter(file => file !== 'versions' && !file.endsWith('.zip'));
+      
+      if (files.length === 0) return;
+      
+      const filesList = files
+        .map(f => `"${f.replace(/"/g, '\"')}"`)
+        .join(' ');
+      
+      try {
+        execSync(`cd "${sourceDir}" && zip -r "${zipFile}" ${filesList} -x "*/\.*"`, { 
+          stdio: 'inherit',
+          windowsHide: true
+        });
+      } catch (error) {
+        console.warn(`Warning: Failed to create zip ${zipFile}:`, error.message);
+      }
+    };
+    
+    // Create version zip
+    createZip('.', path.resolve(versionDir + '.zip'));
+    
+    // Create latest zip in ext directory
+    if (!fs.existsSync(extDir)) {
+      fs.mkdirSync(extDir, { recursive: true });
+    }
+    
+    // Make sure we're not trying to zip the versions directory
+    if (fs.existsSync(versionDir)) {
+      createZip(versionDir, path.resolve(path.join(extDir, 'latest.zip')));
+    }
 
     // Update versionlist.json
     let versionList = { versions: [] };

@@ -107,25 +107,40 @@ async function handleVersionBackup(octokit, context, versioningBranch) {
       }
     });
 
-    // Function to copy files recursively
-    const copyRecursiveSync = (src, dest) => {
+    // Function to copy files recursively, excluding the versions directory
+    const copyRecursiveSync = (src, dest, baseDir = '') => {
       const exists = fs.existsSync(src);
-      const stats = exists && fs.statSync(src);
-      const isDirectory = exists && stats.isDirectory();
+      if (!exists) return;
       
-      if (isDirectory) {
+      const stats = fs.statSync(src);
+      const relativePath = path.relative(baseDir || process.cwd(), src);
+      
+      // Skip the versions directory entirely
+      if (relativePath === 'versions' || relativePath.startsWith('versions/') || relativePath.startsWith('versions\\')) {
+        return;
+      }
+      
+      if (stats.isDirectory()) {
         if (!fs.existsSync(dest)) {
           fs.mkdirSync(dest, { recursive: true });
         }
+        // Skip copying the versions directory
+        if (path.basename(src) === 'versions') {
+          return;
+        }
         fs.readdirSync(src).forEach(childItem => {
-          copyRecursiveSync(path.join(src, childItem), path.join(dest, childItem));
+          copyRecursiveSync(
+            path.join(src, childItem),
+            path.join(dest, childItem),
+            baseDir || src
+          );
         });
       } else {
         fs.copyFileSync(src, dest);
       }
     };
 
-    // Copy files to version directory, excluding the versions directory and any existing zip files
+    // Get list of files to copy (excluding versions and git directory)
     const files = fs.readdirSync('.').filter(file => 
       !['versions', '.git', `${versionDir}.zip`].includes(file)
     );
@@ -139,24 +154,42 @@ async function handleVersionBackup(octokit, context, versioningBranch) {
     files.forEach(file => {
       const source = path.resolve(file);
       const dest = path.join(versionDir, file);
-      copyRecursiveSync(source, dest);
+      copyRecursiveSync(source, dest, process.cwd());
     });
     
-    // Create zip archives
+    // Create zip archives, excluding the versions directory
     const createZip = (sourceDir, zipFile) => {
-      const files = fs.readdirSync(sourceDir).filter(file => file !== 'versions');
-      const filesList = files.map(f => `"${f}"`).join(' ');
-      execSync(`cd "${sourceDir}" && zip -r "${zipFile}" ${filesList}`, { stdio: 'inherit' });
+      const files = fs.readdirSync(sourceDir)
+        .filter(file => file !== 'versions' && !file.endsWith('.zip'));
+      
+      if (files.length === 0) return;
+      
+      const filesList = files
+        .map(f => `"${f.replace(/"/g, '\"')}"`)
+        .join(' ');
+      
+      try {
+        execSync(`cd "${sourceDir}" && zip -r "${zipFile}" ${filesList} -x "*/\.*"`, { 
+          stdio: 'inherit',
+          windowsHide: true
+        });
+      } catch (error) {
+        console.warn(`Warning: Failed to create zip ${zipFile}:`, error.message);
+      }
     };
     
     // Create version zip
-    createZip('.', versionDir + '.zip');
+    createZip('.', path.resolve(versionDir + '.zip'));
     
     // Create latest zip in ext directory
     if (!fs.existsSync(extDir)) {
       fs.mkdirSync(extDir, { recursive: true });
     }
-    createZip(versionDir, path.join(extDir, 'latest.zip'));
+    
+    // Make sure we're not trying to zip the versions directory
+    if (fs.existsSync(versionDir)) {
+      createZip(versionDir, path.resolve(path.join(extDir, 'latest.zip')));
+    }
 
     // Update versionlist.json
     let versionList = { versions: [] };
