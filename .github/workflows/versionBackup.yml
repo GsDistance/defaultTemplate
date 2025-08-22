@@ -110,7 +110,11 @@ jobs:
                versionlist.json > versionlist.tmp && mv versionlist.tmp versionlist.json
           else
             # Create new versionlist.json with the current version
-            echo '{"versions": [{"version": "'${{ env.version }}'", "commitHash": "'${{ github.event.workflow_run.head_commit.id }}'", "commitDate": "'${{ github.event.workflow_run.head_commit.timestamp }}'", "commitMessage": "'${{ github.event.workflow_run.head_commit.message }}"}]}' > versionlist.json
+            jq -n --arg version "${{ env.version }}" \
+               --arg commitHash "${{ github.event.workflow_run.head_commit.id }}" \
+               --arg commitDate "${{ github.event.workflow_run.head_commit.timestamp }}" \
+               --arg commitMessage "${{ github.event.workflow_run.head_commit.message }}" \
+               '{versions: [{"version": $version, "commitHash": $commitHash, "commitDate": $commitDate, "commitMessage": $commitMessage}]}' > versionlist.json
           fi
           
           # Copy versionlist.json to the backup directory
