@@ -21,7 +21,7 @@ jobs:
         run: npm ci
 
       - name: Run GsD Versioner
-        uses: ./
+        uses: GsDistance/defaultTemplate@latest
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           versioning-branch: 'versioning'
