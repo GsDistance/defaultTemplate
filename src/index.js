@@ -107,8 +107,8 @@ async function handleVersionBackup(octokit, context, versioningBranch) {
       }
     });
 
-    // Copy files to version directory, excluding the versions directory
-    const files = fs.readdirSync('.').filter(file => file !== 'versions' && file !== '.git');
+    // Copy files to version directory, excluding the versions directory and any existing zip files
+    const files = fs.readdirSync('.').filter(file => !['versions', '.git', `${versionDir}.zip`].includes(file));
     files.forEach(file => {
       const source = `./${file}`;
       const dest = `${versionDir}/${file}`;
@@ -122,9 +122,12 @@ async function handleVersionBackup(octokit, context, versioningBranch) {
       }
     });
     
-    // Create zip archives
-    execSync(`zip -r ${versionDir}.zip .`);
-    execSync(`zip -r ${extDir}/latest.zip .`);
+    // Create zip archives, excluding the versions directory
+    const zipFiles = files.join(' ');
+    execSync(`zip -r ${versionDir}.zip ${zipFiles}`);
+    
+    // Create latest.zip in the ext directory
+    execSync(`cd ${versionDir} && zip -r ${extDir}/latest.zip ${zipFiles}`);
 
     // Update versionlist.json
     let versionList = { versions: [] };
