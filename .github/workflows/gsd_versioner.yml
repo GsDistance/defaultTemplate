@@ -1,4 +1,4 @@
-name: GSD Versioner
+name: GsD Versioner
 on:
   push:
     branches:
@@ -28,7 +28,7 @@ jobs:
       - name: Build action
         run: npm run build
 
-      - name: Run GSD Versioner
+      - name: Run GsD Versioner
         uses: ./
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
