@@ -1,0 +1,11 @@
+{
+  "name": "versioner",
+  "description": "A GsD versioned project",
+  "readmeURL": "https://github.com/GsDistance/versioner/blob/main/README.md",
+  "author": "tyuXX",
+  "icon": "",
+  "license": "MIT",
+  "versioningBranch": "versioning-main",
+  "githubRepo": "GsDistance/versioner",
+  "builtPackagePath": ""
+}
