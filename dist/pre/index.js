@@ -27564,12 +27564,26 @@ const execP = util.promisify(exec);
 
 async function run() {
   try {
-    // Git LFS is now installed via actions/checkout with lfs:true
     console.log('Setting up Git LFS...');
     
-    // Configure Git LFS
-    await execP('git lfs version');
-    await execP('git lfs install --local');
+    // Check if Git LFS is available
+    try {
+      await execP('git lfs version');
+    } catch (error) {
+      core.warning('Git LFS is not available. Make sure actions/checkout@v3 has lfs:true');
+      return;
+    }
+    
+    // Set git config first
+    await execP('git config --global --add safe.directory /github/workspace');
+    
+    // Try installing Git LFS locally
+    try {
+      await execP('git lfs install --local');
+    } catch (error) {
+      console.warn('Failed to install Git LFS locally, trying global install...');
+      await execP('git lfs install');
+    }
     
     // Configure Git LFS settings
     const lfsThreshold = core.getInput('lfs-threshold-mb') || '90';
