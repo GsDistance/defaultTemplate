@@ -63,14 +63,22 @@ async function handleVersioner(octokit, context, versioningBranch) {
     execSync('git config user.email "github-actions[bot]@users.noreply.github.com"');
     execSync('git config user.name "GitHub Actions"');
     
+    // Create versions/ext directory if it doesn't exist
+    const versionsDir = 'versions';
+    const extDir = path.join(versionsDir, 'ext');
+    if (!fs.existsSync(extDir)) {
+      fs.mkdirSync(extDir, { recursive: true });
+    }
+
     // Get or increment version
     let version = 1;
-    if (fs.existsSync('version.v')) {
-      version = parseInt(fs.readFileSync('version.v', 'utf8')) + 1;
+    const versionFilePath = path.join(extDir, 'version.v');
+    if (fs.existsSync(versionFilePath)) {
+      version = parseInt(fs.readFileSync(versionFilePath, 'utf8')) + 1;
     }
-    fs.writeFileSync('version.v', version.toString());
+    fs.writeFileSync(versionFilePath, version.toString());
 
-    // Create version.json
+    // Create version.json in versions/ext
     const commitDate = new Date().toISOString();
     const commitMessage = process.env.GITHUB_EVENT_NAME === 'push' 
       ? context.payload.head_commit.message 
@@ -83,10 +91,11 @@ async function handleVersioner(octokit, context, versioningBranch) {
       commitMessage
     };
     
-    fs.writeFileSync('version.json', JSON.stringify(versionData, null, 2));
+    fs.writeFileSync(path.join(extDir, 'version.json'), JSON.stringify(versionData, null, 2));
     
-    // Create gsd_metadata.json if it doesn't exist
-    if (!fs.existsSync('gsd_metadata.json')) {
+    // Create gsd_metadata.json in versions/ext if it doesn't exist
+    const metadataPath = path.join(extDir, 'gsd_metadata.json');
+    if (!fs.existsSync(metadataPath)) {
       const metadata = {
         name: context.repo.repo,
         description: 'A GsD versioned project',
@@ -99,11 +108,11 @@ async function handleVersioner(octokit, context, versioningBranch) {
         builtPackagePath: ''
       };
       
-      fs.writeFileSync('gsd_metadata.json', JSON.stringify(metadata, null, 2));
+      fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
     }
 
     // Commit and push changes
-    execSync('git add version.v version.json gsd_metadata.json');
+    execSync(`git add ${versionsDir}`);
     execSync(`git commit -m "Update version to ${version} [skip ci]"`);
     
     // Push changes using the token for authentication
@@ -149,7 +158,7 @@ async function handleVersionBackup(octokit, context, versioningBranch) {
     execSync(`git checkout ${fullVersioningBranch}`);
     
     // Get current version
-    const version = fs.readFileSync('version.v', 'utf8').trim();
+    const version = fs.readFileSync(path.join('versions', 'ext', 'version.v'), 'utf8').trim();
     
     // Create versions directory if it doesn't exist
     const versionsDir = 'versions';
@@ -286,8 +295,8 @@ async function handleVersionBackup(octokit, context, versioningBranch) {
 
     // Update versionlist.json
     let versionList = { versions: [] };
-    if (fs.existsSync('versionlist.json')) {
-      versionList = JSON.parse(fs.readFileSync('versionlist.json', 'utf8'));
+    if (fs.existsSync(path.join(extDir, 'versionlist.json'))) {
+      versionList = JSON.parse(fs.readFileSync(path.join(extDir, 'versionlist.json'), 'utf8'));
     }
     
     versionList.versions.push({
@@ -299,13 +308,12 @@ async function handleVersionBackup(octokit, context, versioningBranch) {
         : 'Version update'
     });
     
-    fs.writeFileSync('versionlist.json', JSON.stringify(versionList, null, 2));
+    fs.writeFileSync(path.join(extDir, 'versionlist.json'), JSON.stringify(versionList, null, 2));
     
     // Copy version files to ext directory
     ['version.v', 'version.json', 'versionlist.json'].forEach(file => {
-      if (fs.existsSync(file)) {
-        fs.copyFileSync(file, path.join(versionDir, file));
-        fs.copyFileSync(file, path.join(extDir, file));
+      if (fs.existsSync(path.join(extDir, file))) {
+        fs.copyFileSync(path.join(extDir, file), path.join(versionDir, file));
       }
     });
 
