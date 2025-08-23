@@ -37,21 +37,26 @@ async function handleVersioner(octokit, context, versioningBranch) {
     execSync(`git clone --depth 1 ${repoUrl} ${cloneDir}`, { stdio: 'inherit' });
     process.chdir(cloneDir);
     
-    // Check if the branch exists on remote
+    // Check if the branch exists on remote and has commits
     const branchExists = await checkRemoteBranchExists(fullVersioningBranch);
     
     if (branchExists) {
-      // If branch exists, fetch and checkout
-      execSync(`git fetch origin ${fullVersioningBranch}`, { stdio: 'inherit' });
-      execSync(`git checkout -b ${fullVersioningBranch} origin/${fullVersioningBranch} --no-track`, { stdio: 'inherit' });
+      try {
+        // Try to fetch and checkout the existing branch
+        execSync(`git fetch origin ${fullVersioningBranch}`, { stdio: 'inherit' });
+        // Create a local branch tracking the remote one
+        execSync(`git checkout -b ${fullVersioningBranch} --track origin/${fullVersioningBranch}`, { 
+          stdio: 'inherit',
+          // This will make the command fail silently if the branch has no commits
+          stdio: ['pipe', 'pipe', 'pipe']
+        });
+      } catch (error) {
+        // If we get here, the branch exists but has no commits
+        core.info(`Branch ${fullVersioningBranch} exists but has no commits, creating a new one`);
+        createNewVersioningBranch(fullVersioningBranch);
+      }
     } else {
-      // If branch doesn't exist, create a new orphan branch
-      core.info(`Creating new versioning branch: ${fullVersioningBranch}`);
-      execSync(`git checkout --orphan ${fullVersioningBranch}`, { stdio: 'inherit' });
-      // Remove all files from the index
-      execSync('git rm -rf .', { stdio: 'inherit' });
-      // Create initial commit
-      execSync('git commit --allow-empty -m "Initial versioning branch"', { stdio: 'inherit' });
+      createNewVersioningBranch(fullVersioningBranch);
     }
     
     // Set up git config
@@ -112,6 +117,17 @@ async function handleVersioner(octokit, context, versioningBranch) {
     core.error('Error in versioner: ' + error.message);
     throw error;
   }
+}
+
+function createNewVersioningBranch(branchName) {
+  core.info(`Creating new versioning branch: ${branchName}`);
+  execSync(`git checkout --orphan ${branchName}`, { stdio: 'inherit' });
+  // Remove all files from the index
+  execSync('git rm -rf .', { stdio: 'inherit' });
+  // Create initial commit
+  execSync('git commit --allow-empty -m "Initial versioning branch"', { stdio: 'inherit' });
+  // Set up the branch to track the remote
+  execSync(`git push -u origin ${branchName}`, { stdio: 'inherit' });
 }
 
 async function handleVersionBackup(octokit, context, versioningBranch) {
@@ -312,9 +328,8 @@ Version: ${version}`;
 // Helper function to check if a branch exists on remote
 async function checkRemoteBranchExists(branchName) {
   try {
-    // This command will fail if the branch doesn't exist
-    execSync(`git ls-remote --heads origin ${branchName}`, { stdio: 'pipe' });
-    return true;
+    const result = execSync(`git ls-remote --heads origin ${branchName}`, { stdio: 'pipe' }).toString();
+    return result.trim() !== '';
   } catch (error) {
     return false;
   }
