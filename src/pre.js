@@ -1,13 +1,33 @@
 const core = require('@actions/core');
 const { exec } = require('child_process');
 const util = require('util');
+const path = require('path');
+const fs = require('fs');
 const execP = util.promisify(exec);
 
 async function run() {
   try {
     console.log('Setting up Git LFS...');
     
-    // Check if Git LFS is available
+    // Get the workspace directory from environment
+    const workspace = process.env.GITHUB_WORKSPACE || process.cwd();
+    console.log(`Workspace: ${workspace}`);
+    
+    // Change to workspace directory
+    process.chdir(workspace);
+    
+    // Check if we're in a git repository
+    try {
+      await execP('git rev-parse --is-inside-work-tree');
+    } catch (error) {
+      core.warning('Not in a Git repository. Initializing new repository...');
+      await execP('git init');
+    }
+    
+    // Set git config
+    await execP('git config --global --add safe.directory /github/workspace');
+    
+    // Check Git LFS
     try {
       await execP('git lfs version');
     } catch (error) {
@@ -15,10 +35,7 @@ async function run() {
       return;
     }
     
-    // Set git config first
-    await execP('git config --global --add safe.directory /github/workspace');
-    
-    // Try installing Git LFS locally
+    // Configure Git LFS
     try {
       await execP('git lfs install --local');
     } catch (error) {
@@ -26,13 +43,12 @@ async function run() {
       await execP('git lfs install');
     }
     
-    // Configure Git LFS settings
-    const lfsThreshold = core.getInput('lfs-threshold-mb') || '90';
-    await execP(`git config lfs.basictransfersonly true`);
-    await execP(`git config lfs.https://github.com/${process.env.GITHUB_REPOSITORY}.git/info/lfs.locksverify false`);
+    // Set Git LFS config
+    const repoUrl = process.env.GITHUB_REPOSITORY || 'unknown/unknown';
+    await execP('git config lfs.basictransfersonly true');
+    await execP(`git config lfs.https://github.com/${repoUrl}.git/info/lfs.locksverify false`);
     
     // Create .gitattributes if it doesn't exist
-    const fs = require('fs');
     const gitAttributesPath = '.gitattributes';
     let gitAttributes = '';
     
@@ -56,6 +72,7 @@ async function run() {
     fs.writeFileSync(gitAttributesPath, gitAttributes.trim());
     
     // Track any existing large files
+    const lfsThreshold = core.getInput('lfs-threshold-mb') || '90';
     try {
       const { stdout } = await execP(`find . -type f -size +${lfsThreshold}M -not -path "*/\.git/*" -not -path "*/node_modules/*"`);
       const largeFiles = stdout.trim().split('\n').filter(Boolean);
