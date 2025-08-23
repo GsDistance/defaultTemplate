@@ -34603,7 +34603,7 @@ async function handleVersioner(octokit, context, versioningBranch) {
     try {
       execSync(`git push ${remoteUrl} HEAD:${fullVersioningBranch}`, { stdio: 'pipe' });
     } catch (pushError) {
-      core.info('Push rejected, attempting safe force push with lease...');
+      core.info('Push rejected, attempting safe force push...');
       execSync(`git push --force ${remoteUrl} HEAD:${fullVersioningBranch}`, { stdio: 'inherit' });
     }
 
@@ -34624,12 +34624,12 @@ function createNewVersioningBranch(branchName) {
   // Create initial commit
   execSync('git commit --allow-empty -m "Initial versioning branch"', { stdio: 'inherit' });
   
-  // Try a regular push first, if it fails due to non-fast-forward, do a force push with lease
+  // Try a regular push first, if it fails due to non-fast-forward, do a force push
   try {
     execSync(`git push -u origin ${branchName}`, { stdio: 'pipe' });
   } catch (pushError) {
-    core.info('Push rejected, attempting safe force push with lease...');
-    execSync(`git push --force-with-lease -u origin ${branchName}`, { stdio: 'inherit' });
+    core.info('Push rejected, attempting safe force push...');
+    execSync(`git push --force -u origin ${branchName}`, { stdio: 'inherit' });
   }
 }
 
@@ -34823,8 +34823,8 @@ Version: ${version}`;
     try {
       execSync(`git push ${remoteUrl} HEAD:${fullVersioningBranch}`, { stdio: 'pipe' });
     } catch (pushError) {
-      core.info('Push rejected, attempting safe force push with lease...');
-      execSync(`git push --force-with-lease ${remoteUrl} HEAD:${fullVersioningBranch}`, { stdio: 'inherit' });
+      core.info('Push rejected, attempting safe force push...');
+      execSync(`git push --force ${remoteUrl} HEAD:${fullVersioningBranch}`, { stdio: 'inherit' });
     }
 
   } catch (error) {
