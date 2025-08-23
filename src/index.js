@@ -30,11 +30,19 @@ async function handleVersioner(octokit, context, versioningBranch) {
     const fullVersioningBranch = `${versioningBranch}-${context.ref_name || 'main'}`;
     
     // Clone the repository with LFS support
-    execSync(`git clone --branch ${fullVersioningBranch} --single-branch https://x-access-token:${process.env.GITHUB_TOKEN}@github.com/${context.repo.owner}/${context.repo.repo}.git ${fullVersioningBranch} || git init ${fullVersioningBranch}`, { stdio: 'inherit' });
+    execSync(`git clone --branch=${fullVersioningBranch} --single-branch https://x-access-token:${process.env.GITHUB_TOKEN}@github.com/${context.repo.owner}/${context.repo.repo}.git ${fullVersioningBranch} || git init ${fullVersioningBranch}`, { stdio: 'inherit' });
     
-    // Checkout existing branch
-    execSync(`git fetch origin ${fullVersioningBranch}`);
-    execSync(`git checkout ${fullVersioningBranch}`);
+    // Change to the cloned directory
+    process.chdir(fullVersioningBranch);
+    
+    // Explicitly checkout the branch using full ref
+    try {
+      execSync(`git checkout --force --recurse-submodules -B ${fullVersioningBranch} --track origin/${fullVersioningBranch}`);
+    } catch (error) {
+      // If branch doesn't exist yet, create it
+      execSync(`git checkout --orphan ${fullVersioningBranch}`);
+      execSync('git rm -rf .');
+    }
     
     // Get or increment version
     let version = 1;
