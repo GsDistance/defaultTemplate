@@ -18,6 +18,6 @@ inputs:
     default: '90'
 runs:
   using: 'node20'
-  main: 'dist/index.js'
-  pre: 'pre.js'
-  post: 'cleanup.js'
+  main: 'dist/index/index.js'
+  pre: 'dist/pre/index.js'
+  post: 'dist/cleanup/index.js'

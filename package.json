@@ -2,10 +2,10 @@
     "name": "gsd-versioner",
     "version": "1.0.0",
     "description": "Default template for quick setup.",
-    "main": "dist/index.js",
+    "main": "dist/index/index.js",
     "scripts": {
-      "run": "node dist/index.js",
-      "build": "ncc build src/index.js -o dist --source-map",
+      "run": "node dist/index/index.js",
+      "build": "ncc build src/index.js -o dist/index --source-map && ncc build src/cleanup.js -o dist/cleanup --source-map && ncc build src/pre.js -o dist/pre --source-map",
       "prepare": "husky install"
     },
     "repository": {
