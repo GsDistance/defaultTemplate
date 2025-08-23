@@ -27564,16 +27564,14 @@ const execP = util.promisify(exec);
 
 async function run() {
   try {
-    // Install Git LFS
+    // Git LFS is now installed via actions/checkout with lfs:true
     console.log('Setting up Git LFS...');
-    await execP('sudo apt-get update');
-    await execP('sudo apt-get install -y git-lfs');
-    await execP('git lfs install');
     
-    // Enable LFS in the repository
+    // Configure Git LFS
+    await execP('git lfs version');
     await execP('git lfs install --local');
     
-    // Configure Git LFS to handle large files
+    // Configure Git LFS settings
     const lfsThreshold = core.getInput('lfs-threshold-mb') || '90';
     await execP(`git config lfs.basictransfersonly true`);
     await execP(`git config lfs.https://github.com/${process.env.GITHUB_REPOSITORY}.git/info/lfs.locksverify false`);
