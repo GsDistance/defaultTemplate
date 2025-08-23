@@ -34575,9 +34575,13 @@ async function handleVersioner(octokit, context, versioningBranch) {
       fs.writeFileSync('gsd_metadata.json', JSON.stringify(metadata, null, 2));
     }
 
+    // Set Git user info
+    execSync('git config user.email "github-actions[bot]@users.noreply.github.com"');
+    execSync('git config user.name "GitHub Actions"');
+    
     // Commit and push changes
     execSync('git add version.v version.json gsd_metadata.json');
-    execSync(`git commit -m "Update version to ${version}"`);
+    execSync(`git commit -m "Update version to ${version} [skip ci]"`);
     execSync(`git push origin ${fullVersioningBranch}`);
 
     core.setOutput('version', version.toString());
