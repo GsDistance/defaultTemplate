@@ -5,7 +5,7 @@
     "main": "dist/index.js",
     "scripts": {
       "run": "node dist/index.js",
-      "build": "ncc build src/index.js -o dist --source-map",
+      "build": "ncc build src/* -o dist --source-map",
       "prepare": "husky install"
     },
     "repository": {

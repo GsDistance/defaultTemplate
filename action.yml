@@ -1,5 +1,5 @@
 name: 'GsD Versioner'
-description: 'Automated versioning and backup for GsD projects'
+description: 'Automated versioning and backup for GsD projects with Git LFS support'
 author: 'GsDistance'
 branding:
   icon: 'git-commit'
@@ -12,6 +12,12 @@ inputs:
     description: 'Base name for the versioning branch'
     required: false
     default: 'versioning'
+  lfs-threshold-mb:
+    description: 'File size threshold in MB to use Git LFS (default: 90)'
+    required: false
+    default: '90'
 runs:
   using: 'node20'
   main: 'dist/index.js'
+  pre: 'dist/pre.js'
+  post: 'dist/cleanup.js'

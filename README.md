@@ -1,6 +1,6 @@
-# defaultTemplate
+# versioner
 
-Template repository for quick setup.
+Used for automated versioning and backup for GsD projects
 Also used for generating metadata used by [GsDistance Project Hub](https://hub.gsdistance.org)
 
 ## Usage
