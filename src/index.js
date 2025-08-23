@@ -109,19 +109,10 @@ async function handleVersioner(octokit, context, versioningBranch) {
     // Push changes using the token for authentication
     const remoteUrl = `https://x-access-token:${ghToken}@github.com/${context.repo.owner}/${context.repo.repo}.git`;
     try {
-      execSync(`git fetch origin ${fullVersioningBranch}`, { stdio: 'pipe' });
       execSync(`git push ${remoteUrl} HEAD:${fullVersioningBranch}`, { stdio: 'pipe' });
     } catch (pushError) {
-      if (pushError.message.includes('stale info') || pushError.message.includes('non-fast-forward')) {
-        core.info('Remote branch has diverged, forcing push with lease...');
-        // Reset to remote branch and then push
-        execSync(`git fetch origin ${fullVersioningBranch}`, { stdio: 'pipe' });
-        execSync(`git reset --soft origin/${fullVersioningBranch}`, { stdio: 'pipe' });
-        execSync(`git commit --allow-empty -m "Reset to remote branch"`, { stdio: 'pipe' });
-        execSync(`git push --force-with-lease ${remoteUrl} HEAD:${fullVersioningBranch}`, { stdio: 'inherit' });
-      } else {
-        throw pushError;
-      }
+      core.info('Push rejected, attempting safe force push with lease...');
+      execSync(`git push --force ${remoteUrl} HEAD:${fullVersioningBranch}`, { stdio: 'inherit' });
     }
 
     core.setOutput('version', version.toString());
@@ -143,19 +134,10 @@ function createNewVersioningBranch(branchName) {
   
   // Try a regular push first, if it fails due to non-fast-forward, do a force push with lease
   try {
-    execSync(`git fetch origin ${branchName}`, { stdio: 'pipe' });
     execSync(`git push -u origin ${branchName}`, { stdio: 'pipe' });
   } catch (pushError) {
-    if (pushError.message.includes('stale info') || pushError.message.includes('non-fast-forward')) {
-      core.info('Remote branch has diverged, forcing push with lease...');
-      // Reset to remote branch and then push
-      execSync(`git fetch origin ${branchName}`, { stdio: 'pipe' });
-      execSync(`git reset --soft origin/${branchName}`, { stdio: 'pipe' });
-      execSync(`git commit --allow-empty -m "Reset to remote branch"`, { stdio: 'pipe' });
-      execSync(`git push --force-with-lease -u origin ${branchName}`, { stdio: 'inherit' });
-    } else {
-      throw pushError;
-    }
+    core.info('Push rejected, attempting safe force push with lease...');
+    execSync(`git push --force-with-lease -u origin ${branchName}`, { stdio: 'inherit' });
   }
 }
 
@@ -347,19 +329,10 @@ Version: ${version}`;
     // Push changes using the token for authentication
     const remoteUrl = `https://x-access-token:${ghToken}@github.com/${context.repo.owner}/${context.repo.repo}.git`;
     try {
-      execSync(`git fetch origin ${fullVersioningBranch}`, { stdio: 'pipe' });
       execSync(`git push ${remoteUrl} HEAD:${fullVersioningBranch}`, { stdio: 'pipe' });
     } catch (pushError) {
-      if (pushError.message.includes('stale info') || pushError.message.includes('non-fast-forward')) {
-        core.info('Remote branch has diverged, forcing push with lease...');
-        // Reset to remote branch and then push
-        execSync(`git fetch origin ${fullVersioningBranch}`, { stdio: 'pipe' });
-        execSync(`git reset --soft origin/${fullVersioningBranch}`, { stdio: 'pipe' });
-        execSync(`git commit --allow-empty -m "Reset to remote branch"`, { stdio: 'pipe' });
-        execSync(`git push --force-with-lease ${remoteUrl} HEAD:${fullVersioningBranch}`, { stdio: 'inherit' });
-      } else {
-        throw pushError;
-      }
+      core.info('Push rejected, attempting safe force push with lease...');
+      execSync(`git push --force-with-lease ${remoteUrl} HEAD:${fullVersioningBranch}`, { stdio: 'inherit' });
     }
 
   } catch (error) {
