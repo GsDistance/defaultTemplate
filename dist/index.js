@@ -34495,6 +34495,8 @@ const github = __nccwpck_require__(5438);
 const { execSync } = __nccwpck_require__(2081);
 const fs = __nccwpck_require__(7147);
 const path = __nccwpck_require__(1017);
+const { promisify } = __nccwpck_require__(3837);
+const exec = promisify((__nccwpck_require__(2081).exec));
 
 async function run() {
   try {
@@ -34519,29 +34521,13 @@ async function handleVersioner(octokit, context, versioningBranch) {
   try {
     const fullVersioningBranch = `${versioningBranch}-${context.ref_name || 'main'}`;
     
-    // Clone the repository
-    execSync('git config --global user.name "github-actions[bot]"');
-    execSync('git config --global user.email "github-actions[bot]@users.noreply.github.com"');
+    // Clone the repository with LFS support
+    execSync(`git clone --branch ${fullVersioningBranch} --single-branch https://x-access-token:${process.env.GITHUB_TOKEN}@github.com/${context.repo.owner}/${context.repo.repo}.git ${fullVersioningBranch} || git init ${fullVersioningBranch}`, { stdio: 'inherit' });
     
-    // Check if versioning branch exists
-    const branchExists = await octokit.rest.repos.getBranch({
-      owner: context.repo.owner,
-      repo: context.repo.repo,
-      branch: fullVersioningBranch
-    }).then(() => true).catch(() => false);
-
-    if (!branchExists) {
-      // Create new branch
-      execSync(`git checkout --orphan ${fullVersioningBranch}`);
-      execSync('git rm -rf .');
-      execSync('git commit --allow-empty -m "Initial commit for versioning branch"');
-      execSync(`git push -u origin ${fullVersioningBranch}`);
-    } else {
-      // Checkout existing branch
-      execSync(`git fetch origin ${fullVersioningBranch}`);
-      execSync(`git checkout ${fullVersioningBranch}`);
-    }
-
+    // Checkout existing branch
+    execSync(`git fetch origin ${fullVersioningBranch}`);
+    execSync(`git checkout ${fullVersioningBranch}`);
+    
     // Get or increment version
     let version = 1;
     if (fs.existsSync('version.v')) {
@@ -34616,15 +34602,24 @@ async function handleVersionBackup(octokit, context, versioningBranch) {
       }
     });
 
-    // Function to copy files recursively, excluding the versions directory
+    // Function to copy files recursively, excluding the versions directory and large files
     const copyRecursiveSync = (src, dest, baseDir = '') => {
       const exists = fs.existsSync(src);
       if (!exists) return;
       
       const stats = fs.statSync(src);
       const relativePath = path.relative(baseDir || process.cwd(), src);
+      const fileName = path.basename(src);
       
-      // Skip the versions directory entirely
+      // Skip system and version control directories
+      const EXCLUDE_DIRS = ['node_modules', 'venv', '__pycache__', '.git', "versions"];
+      if (EXCLUDE_DIRS.includes(fileName) || 
+          relativePath.split(path.sep).some(part => EXCLUDE_DIRS.includes(part))) {
+        console.log(`Skipping excluded directory: ${relativePath}`);
+        return;
+      }
+      
+      // Skip the versions directory
       if (relativePath === 'versions' || relativePath.startsWith('versions/') || relativePath.startsWith('versions\\')) {
         return;
       }
@@ -34633,10 +34628,11 @@ async function handleVersionBackup(octokit, context, versioningBranch) {
         if (!fs.existsSync(dest)) {
           fs.mkdirSync(dest, { recursive: true });
         }
-        // Skip copying the versions directory
-        if (path.basename(src) === 'versions') {
+        
+        if (fileName === 'versions') {
           return;
         }
+        
         fs.readdirSync(src).forEach(childItem => {
           copyRecursiveSync(
             path.join(src, childItem),
@@ -34645,7 +34641,12 @@ async function handleVersionBackup(octokit, context, versioningBranch) {
           );
         });
       } else {
-        fs.copyFileSync(src, dest);
+        try {
+          // Just copy the file - Git LFS will handle it if it's a tracked pattern
+          fs.copyFileSync(src, dest);
+        } catch (error) {
+          console.error(`Error copying ${src} to ${dest}:`, error.message);
+        }
       }
     };
 
@@ -34666,24 +34667,47 @@ async function handleVersionBackup(octokit, context, versioningBranch) {
       copyRecursiveSync(source, dest, process.cwd());
     });
     
-    // Create zip archives, excluding the versions directory
+    // Create zip archives, excluding the versions directory and large files
     const createZip = (sourceDir, zipFile) => {
-      const files = fs.readdirSync(sourceDir)
-        .filter(file => file !== 'versions' && !file.endsWith('.zip'));
+      const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB max file size
+      const files = [];
+      
+      // Get all files with size check
+      fs.readdirSync(sourceDir).forEach(file => {
+        if (file === 'versions' || file.endsWith('.zip')) return;
+        
+        const filePath = path.join(sourceDir, file);
+        const stats = fs.statSync(filePath);
+        
+        if (stats.size > MAX_FILE_SIZE) {
+          console.warn(`Skipping large file: ${file} (${(stats.size / (1024 * 1024)).toFixed(2)} MB)`);
+          return;
+        }
+        
+        files.push(file);
+      });
       
       if (files.length === 0) return;
       
       const filesList = files
-        .map(f => `"${f.replace(/"/g, '\"')}"`)
+        .map(f => `"${f.replace(/"/g, '\\"')}"`)
         .join(' ');
       
       try {
-        execSync(`cd "${sourceDir}" && zip -r "${zipFile}" ${filesList} -x "*/\.*"`, { 
+        execSync(`cd "${sourceDir}" && zip -r "${zipFile}" ${filesList} -x "*/\.*" -x "*.git*" -x "*node_modules*" -x "*venv*" -x "*__pycache__*"`, { 
           stdio: 'inherit',
-          windowsHide: true
+          windowsHide: true,
+          maxBuffer: 50 * 1024 * 1024 // 50MB buffer for zip command
         });
       } catch (error) {
         console.warn(`Warning: Failed to create zip ${zipFile}:`, error.message);
+        // If zip fails, try with a smaller file list
+        if (files.length > 1) {
+          console.log('Trying with fewer files...');
+          const half = Math.ceil(files.length / 2);
+          createZip(sourceDir, zipFile, files.slice(0, half));
+          createZip(sourceDir, zipFile, files.slice(half));
+        }
       }
     };
     

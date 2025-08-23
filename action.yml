@@ -19,5 +19,5 @@ inputs:
 runs:
   using: 'node20'
   main: 'dist/index.js'
-  pre: 'dist/pre.js'
-  post: 'dist/cleanup.js'
+  pre: 'pre.js'
+  post: 'cleanup.js'
