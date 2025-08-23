@@ -34497,6 +34497,7 @@ const fs = __nccwpck_require__(7147);
 const path = __nccwpck_require__(1017);
 const { promisify } = __nccwpck_require__(3837);
 const exec = promisify((__nccwpck_require__(2081).exec));
+let ghToken = process.env.GITHUB_TOKEN;
 
 async function run() {
   try {
@@ -34505,6 +34506,7 @@ async function run() {
     const versioningBranch = core.getInput('versioning-branch') || 'versioning';
     const octokit = github.getOctokit(token);
     const { context } = github;
+    ghToken = token;
     
     // 1. Versioner functionality
     await handleVersioner(octokit, context, versioningBranch);
@@ -34522,7 +34524,7 @@ async function handleVersioner(octokit, context, versioningBranch) {
     const fullVersioningBranch = `${versioningBranch}-${context.ref_name || 'main'}`;
     
     // Clone the repository with LFS support
-    execSync(`git clone --branch=${fullVersioningBranch} --single-branch https://x-access-token:${process.env.GITHUB_TOKEN}@github.com/${context.repo.owner}/${context.repo.repo}.git ${fullVersioningBranch} || git init ${fullVersioningBranch}`, { stdio: 'inherit' });
+    execSync(`git clone --branch=${fullVersioningBranch} --single-branch https://x-access-token:${ghToken}@github.com/${context.repo.owner}/${context.repo.repo}.git ${fullVersioningBranch} || git init ${fullVersioningBranch}`, { stdio: 'inherit' });
     
     // Change to the cloned directory
     process.chdir(fullVersioningBranch);
@@ -34584,7 +34586,7 @@ async function handleVersioner(octokit, context, versioningBranch) {
     execSync(`git commit -m "Update version to ${version} [skip ci]"`);
     
     // Push changes using the token for authentication
-    const remoteUrl = `https://x-access-token:${process.env.GITHUB_TOKEN}@github.com/${context.repo.owner}/${context.repo.repo}.git`;
+    const remoteUrl = `https://x-access-token:${ghToken}@github.com/${context.repo.owner}/${context.repo.repo}.git`;
     execSync(`git push ${remoteUrl} HEAD:${fullVersioningBranch} --force`);
 
     core.setOutput('version', version.toString());
@@ -34782,7 +34784,7 @@ Version: ${version}`;
     execSync(`git commit -m "Backup version ${version} [skip ci]"`);
     
     // Push changes using the token for authentication
-    const remoteUrl = `https://x-access-token:${process.env.GITHUB_TOKEN}@github.com/${context.repo.owner}/${context.repo.repo}.git`;
+    const remoteUrl = `https://x-access-token:${ghToken}@github.com/${context.repo.owner}/${context.repo.repo}.git`;
     execSync(`git push ${remoteUrl} HEAD:${fullVersioningBranch} --force`);
 
   } catch (error) {
