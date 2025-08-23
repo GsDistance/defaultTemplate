@@ -30,7 +30,7 @@ async function handleVersioner(octokit, context, versioningBranch) {
     const fullVersioningBranch = `${versioningBranch}-${context.ref_name || 'main'}`;
     
     // Clone the repository with LFS support
-    execSync(`git clone --branch=${fullVersioningBranch} --single-branch https://x-access-token:${process.env.GITHUB_TOKEN}@github.com/${context.repo.owner}/${context.repo.repo}.git ${fullVersioningBranch} || git init ${fullVersioningBranch}`, { stdio: 'inherit' });
+    execSync(`git clone --branch=${fullVersioningBranch} --single-branch https://x-access-token:${token}@github.com/${context.repo.owner}/${context.repo.repo}.git ${fullVersioningBranch} || git init ${fullVersioningBranch}`, { stdio: 'inherit' });
     
     // Change to the cloned directory
     process.chdir(fullVersioningBranch);
@@ -90,7 +90,10 @@ async function handleVersioner(octokit, context, versioningBranch) {
     // Commit and push changes
     execSync('git add version.v version.json gsd_metadata.json');
     execSync(`git commit -m "Update version to ${version} [skip ci]"`);
-    execSync(`git push origin ${fullVersioningBranch}`);
+    
+    // Push with token authentication
+    const pushUrl = `https://x-access-token:${token}@github.com/${context.repo.owner}/${context.repo.repo}.git`;
+    execSync(`git push ${pushUrl} ${fullVersioningBranch}`);
 
     core.setOutput('version', version.toString());
     core.setOutput('versioning-branch', fullVersioningBranch);
@@ -278,10 +281,17 @@ Version: ${version}`;
     fs.writeFileSync(path.join(versionDir, 'change_log.txt'), changeLog);
     fs.writeFileSync(path.join(extDir, 'change_log.txt'), changeLog);
 
-    // Commit and push changes
+    // Set Git user info (in case this is a new repository)
+    execSync('git config user.email "github-actions[bot]@users.noreply.github.com"');
+    execSync('git config user.name "GitHub Actions"');
+    
+    // Commit and push changes with token authentication
     execSync('git add .');
-    execSync(`git commit -m "Backup version ${version}"`);
-    execSync(`git push origin ${fullVersioningBranch}`);
+    execSync(`git commit -m "Backup version ${version} [skip ci]"`);
+    
+    // Push with token authentication
+    const pushUrl = `https://x-access-token:${token}@github.com/${context.repo.owner}/${context.repo.repo}.git`;
+    execSync(`git push ${pushUrl} ${fullVersioningBranch}`);
 
   } catch (error) {
     core.error('Error in version backup: ' + error.message);
