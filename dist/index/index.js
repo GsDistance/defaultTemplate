@@ -34600,7 +34600,12 @@ async function handleVersioner(octokit, context, versioningBranch) {
     
     // Push changes using the token for authentication
     const remoteUrl = `https://x-access-token:${ghToken}@github.com/${context.repo.owner}/${context.repo.repo}.git`;
-    execSync(`git push ${remoteUrl} HEAD:${fullVersioningBranch} --force`);
+    try {
+      execSync(`git push ${remoteUrl} HEAD:${fullVersioningBranch}`, { stdio: 'pipe' });
+    } catch (pushError) {
+      core.info('Push rejected, attempting safe force push with lease...');
+      execSync(`git push --force-with-lease ${remoteUrl} HEAD:${fullVersioningBranch}`, { stdio: 'inherit' });
+    }
 
     core.setOutput('version', version.toString());
     core.setOutput('versioning-branch', fullVersioningBranch);
@@ -34618,8 +34623,14 @@ function createNewVersioningBranch(branchName) {
   execSync('git rm -rf .', { stdio: 'inherit' });
   // Create initial commit
   execSync('git commit --allow-empty -m "Initial versioning branch"', { stdio: 'inherit' });
-  // Set up the branch to track the remote
-  execSync(`git push -u origin ${branchName}`, { stdio: 'inherit' });
+  
+  // Try a regular push first, if it fails due to non-fast-forward, do a force push with lease
+  try {
+    execSync(`git push -u origin ${branchName}`, { stdio: 'pipe' });
+  } catch (pushError) {
+    core.info('Push rejected, attempting safe force push with lease...');
+    execSync(`git push --force-with-lease -u origin ${branchName}`, { stdio: 'inherit' });
+  }
 }
 
 async function handleVersionBackup(octokit, context, versioningBranch) {
@@ -34809,7 +34820,12 @@ Version: ${version}`;
     
     // Push changes using the token for authentication
     const remoteUrl = `https://x-access-token:${ghToken}@github.com/${context.repo.owner}/${context.repo.repo}.git`;
-    execSync(`git push ${remoteUrl} HEAD:${fullVersioningBranch} --force`);
+    try {
+      execSync(`git push ${remoteUrl} HEAD:${fullVersioningBranch}`, { stdio: 'pipe' });
+    } catch (pushError) {
+      core.info('Push rejected, attempting safe force push with lease...');
+      execSync(`git push --force-with-lease ${remoteUrl} HEAD:${fullVersioningBranch}`, { stdio: 'inherit' });
+    }
 
   } catch (error) {
     core.error('Error in version backup: ' + error.message);
