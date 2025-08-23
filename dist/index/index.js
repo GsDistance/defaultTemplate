@@ -34583,9 +34583,11 @@ async function handleVersioner(octokit, context, versioningBranch) {
     execSync('git add version.v version.json gsd_metadata.json');
     execSync(`git commit -m "Update version to ${version} [skip ci]"`);
     
-    // Push with token authentication
-    const pushUrl = `https://x-access-token:${process.env.GITHUB_TOKEN}@github.com/${context.repo.owner}/${context.repo.repo}.git`;
-    execSync(`git push ${pushUrl} ${fullVersioningBranch}`);
+    // Configure Git to use the token for authentication
+    const repoUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}.git`;
+    execSync(`git remote set-url origin ${repoUrl}`);
+    execSync(`git config --local http.https://github.com/.extraheader "AUTHORIZATION: basic ${Buffer.from(`x-access-token:${process.env.GITHUB_TOKEN}`).toString('base64')}"`);
+    execSync(`git push origin ${fullVersioningBranch} --force`);
 
     core.setOutput('version', version.toString());
     core.setOutput('versioning-branch', fullVersioningBranch);
@@ -34781,9 +34783,11 @@ Version: ${version}`;
     execSync('git add .');
     execSync(`git commit -m "Backup version ${version} [skip ci]"`);
     
-    // Push with token authentication
-    const pushUrl = `https://x-access-token:${process.env.GITHUB_TOKEN}@github.com/${context.repo.owner}/${context.repo.repo}.git`;
-    execSync(`git push ${pushUrl} ${fullVersioningBranch}`);
+    // Configure Git to use the token for authentication
+    const repoUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}.git`;
+    execSync(`git remote set-url origin ${repoUrl}`);
+    execSync(`git config --local http.https://github.com/.extraheader "AUTHORIZATION: basic ${Buffer.from(`x-access-token:${process.env.GITHUB_TOKEN}`).toString('base64')}"`);
+    execSync(`git push origin ${fullVersioningBranch} --force`);
 
   } catch (error) {
     core.error('Error in version backup: ' + error.message);
