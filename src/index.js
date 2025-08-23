@@ -30,7 +30,7 @@ async function handleVersioner(octokit, context, versioningBranch) {
     const fullVersioningBranch = `${versioningBranch}-${context.ref_name || 'main'}`;
     
     // Clone the repository with LFS support
-    execSync(`git clone --branch=${fullVersioningBranch} --single-branch https://x-access-token:${token}@github.com/${context.repo.owner}/${context.repo.repo}.git ${fullVersioningBranch} || git init ${fullVersioningBranch}`, { stdio: 'inherit' });
+    execSync(`git clone --branch=${fullVersioningBranch} --single-branch https://x-access-token:${process.env.GITHUB_TOKEN}@github.com/${context.repo.owner}/${context.repo.repo}.git ${fullVersioningBranch} || git init ${fullVersioningBranch}`, { stdio: 'inherit' });
     
     // Change to the cloned directory
     process.chdir(fullVersioningBranch);
@@ -92,7 +92,7 @@ async function handleVersioner(octokit, context, versioningBranch) {
     execSync(`git commit -m "Update version to ${version} [skip ci]"`);
     
     // Push with token authentication
-    const pushUrl = `https://x-access-token:${token}@github.com/${context.repo.owner}/${context.repo.repo}.git`;
+    const pushUrl = `https://x-access-token:${process.env.GITHUB_TOKEN}@github.com/${context.repo.owner}/${context.repo.repo}.git`;
     execSync(`git push ${pushUrl} ${fullVersioningBranch}`);
 
     core.setOutput('version', version.toString());
@@ -290,7 +290,7 @@ Version: ${version}`;
     execSync(`git commit -m "Backup version ${version} [skip ci]"`);
     
     // Push with token authentication
-    const pushUrl = `https://x-access-token:${token}@github.com/${context.repo.owner}/${context.repo.repo}.git`;
+    const pushUrl = `https://x-access-token:${process.env.GITHUB_TOKEN}@github.com/${context.repo.owner}/${context.repo.repo}.git`;
     execSync(`git push ${pushUrl} ${fullVersioningBranch}`);
 
   } catch (error) {
