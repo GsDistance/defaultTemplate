@@ -71,9 +71,26 @@ async function handleVersioner(octokit, context, versioningBranch) {
     };
     
     fs.writeFileSync('version.json', JSON.stringify(versionData, null, 2));
+    
+    // Create gsd_metadata.json if it doesn't exist
+    if (!fs.existsSync('gsd_metadata.json')) {
+      const metadata = {
+        name: context.repo.repo,
+        description: 'A GsD versioned project',
+        readmeURL: `https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/README.md`,
+        author: context.actor,
+        icon: '',
+        license: 'MIT',
+        versioningBranch: fullVersioningBranch,
+        githubRepo: `${context.repo.owner}/${context.repo.repo}`,
+        builtPackagePath: ''
+      };
+      
+      fs.writeFileSync('gsd_metadata.json', JSON.stringify(metadata, null, 2));
+    }
 
     // Commit and push changes
-    execSync('git add version.v version.json');
+    execSync('git add version.v version.json gsd_metadata.json');
     execSync(`git commit -m "Update version to ${version}"`);
     execSync(`git push origin ${fullVersioningBranch}`);
 
